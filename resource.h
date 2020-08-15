@@ -1,0 +1,11 @@
+#ifndef RESOURCE_H
+#define RESOURCE_H
+
+#define IDR_POPUP_MENU 4
+#define IDI_TRAYICON 5
+#define IDD_ABOUT 108
+#define ID_POPUP_ENABLE 40007
+#define ID_POPUP_EXIT 40009
+#define ID_POPUP_ABOUT 40011
+
+#endif // RESOURCE_H

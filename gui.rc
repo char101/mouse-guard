@@ -1,0 +1,11 @@
+#include "resource.h"
+
+IDR_POPUP_MENU MENU
+BEGIN
+    POPUP "POPUP"
+    BEGIN
+        MENUITEM "Exit",                        ID_POPUP_EXIT
+    END
+END
+
+IDI_TRAYICON            ICON                    "app.ico"
