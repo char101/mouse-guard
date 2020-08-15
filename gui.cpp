@@ -56,37 +56,25 @@ void showWarning(const wchar_t *file, int line, const wchar_t *func, const wchar
 LRESULT __stdcall lowLevelMouseProc(_In_ int nCode, _In_ WPARAM wParam, _In_ LPARAM lParam)
 {
     static int prevX = 0;
-    static bool mousePressed = false;
     if (nCode == 0) {
-        switch (wParam) {
-        case WM_LBUTTONDOWN:
-        case WM_RBUTTONDOWN:
-            mousePressed = true;
-            break;
-        case WM_LBUTTONUP:
-        case WM_RBUTTONUP:
-            mousePressed = false;
-            break;
-        case WM_MOUSEMOVE:
+        if (wParam == WM_MOUSEMOVE) {
             MSLLHOOKSTRUCT *lp = (MSLLHOOKSTRUCT *)lParam;
             const int x = lp->pt.x;
-            if (!mousePressed && prevX < MONITOR_WIDTH && x >= MONITOR_WIDTH) {
-                if (x - prevX < 5) {
-                    INPUT input;
-                    input.type = INPUT_MOUSE;
-                    input.mi.mouseData = 0;
-                    input.mi.dx = (int)(X_UNIT * (MONITOR_WIDTH - 1) - 1);
-                    input.mi.dy = (int)(Y_UNIT * lp->pt.y - 1);
-                    input.mi.time = 0;
-                    input.mi.dwExtraInfo = 0;
-                    input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+            if (prevX < MONITOR_WIDTH && x >= MONITOR_WIDTH && x - prevX < 5) {
+                INPUT input;
+                input.type = INPUT_MOUSE;
+                input.mi.mouseData = 0;
+                input.mi.dx = (int)(X_UNIT * (MONITOR_WIDTH - 1) - 1);
+                input.mi.dy = (int)(Y_UNIT * lp->pt.y - 1);
+                input.mi.time = 0;
+                input.mi.dwExtraInfo = 0;
+                input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
 
-                    if (SendInput(1, &input, sizeof(INPUT)) > 0) {
-                        prevX = x;
-                        return 1; // mouse handled
-                    }
-                    WARNING(L"SendInput: %s", GetLastError());
+                if (SendInput(1, &input, sizeof(INPUT)) > 0) {
+                    prevX = x;
+                    return 1; // mouse handled
                 }
+                WARNING(L"SendInput: %s", GetLastError());
             }
             prevX = x;
             break;
@@ -125,44 +113,41 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         Shell_NotifyIcon(NIM_DELETE, &gTrayIconData);
         PostQuitMessage(0);
         break;
-    case WM_USER_SHELLICON: // sys tray icon messages
+    case WM_USER_SHELLICON:
         switch (LOWORD(lParam)) {
         case WM_LBUTTONDOWN:
         case WM_RBUTTONDOWN: {
-            HMENU hMenu, hSubMenu;
-            POINT pos;
-            // get mouse cursor position x and y as lParam has the Message itself
-            GetCursorPos(&pos);
+            HMENU menu = LoadMenu(gInstance, MAKEINTRESOURCE(IDR_POPUP_MENU));
+            if (!hMenu) {
+                WARNING("LoadMenu failed");
+                return -1;
+            }
 
-            // Load menu resource
-            hMenu = LoadMenu(gInstance, MAKEINTRESOURCE(IDR_POPUP_MENU));
-            if (!hMenu)
-                return -1; // !0, message not successful?
-
-            // Select the first submenu
-            hSubMenu = GetSubMenu(hMenu, 0);
-            if (!hSubMenu) {
-                DestroyMenu(hMenu); // Be sure to Destroy Menu Before Returning
+            HMENU submenu = GetSubMenu(menu, 0);
+            if (!submenu) {
+                DestroyMenu(menu);
+                WARNING("GetSubMenu failed");
                 return -1;
             }
 
             // Display menu
+            POINT pos;
+            GetCursorPos(&pos);
             SetForegroundWindow(gHwnd);
-            TrackPopupMenu(hSubMenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_BOTTOMALIGN, pos.x, pos.y, 0, gHwnd, NULL);
+            TrackPopupMenu(submenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_BOTTOMALIGN, pos.x, pos.y, 0, gHwnd, NULL);
             SendMessage(gHwnd, WM_NULL, 0, 0);
 
-            // Kill off objects we're done with
-            DestroyMenu(hMenu);
+            DestroyMenu(menu);
         } break;
         }
         break;
     case WM_CLOSE:
-        DestroyWindow(gHwnd); // Destroy Window
+        DestroyWindow(gHwnd);
         break;
     case WM_COMMAND:
         switch (LOWORD(wParam)) {
         case ID_POPUP_EXIT:
-            DestroyWindow(gHwnd); // Destroy Window
+            DestroyWindow(gHwnd);
             break;
         }
         break;
