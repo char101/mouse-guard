@@ -77,7 +77,6 @@ LRESULT __stdcall lowLevelMouseProc(_In_ int nCode, _In_ WPARAM wParam, _In_ LPA
                 WARNING(L"SendInput: %s", GetLastError());
             }
             prevX = x;
-            break;
         }
     }
     return CallNextHookEx(0, nCode, wParam, lParam);
@@ -118,15 +117,15 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_LBUTTONDOWN:
         case WM_RBUTTONDOWN: {
             HMENU menu = LoadMenu(gInstance, MAKEINTRESOURCE(IDR_POPUP_MENU));
-            if (!hMenu) {
-                WARNING("LoadMenu failed");
+            if (!menu) {
+                WARNING(L"LoadMenu failed");
                 return -1;
             }
 
             HMENU submenu = GetSubMenu(menu, 0);
             if (!submenu) {
                 DestroyMenu(menu);
-                WARNING("GetSubMenu failed");
+                WARNING(L"GetSubMenu failed");
                 return -1;
             }
 
