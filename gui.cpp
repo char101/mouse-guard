@@ -12,10 +12,13 @@
 #define WFILE WIDE1(__FILE__)
 #define WFUNCTION WIDE1(__FUNCTION__)
 
+#define HORIZONTAL_THRESHOLD 7
+
 const int MONITOR_WIDTH = GetSystemMetrics(SM_CXSCREEN);
 const float X_UNIT = 65536.0f / MONITOR_WIDTH;
 const float Y_UNIT = 65536.0f / GetSystemMetrics(SM_CYSCREEN);
 
+HANDLE gSingleInstanceMutex;
 HHOOK gMouseHookHandle;
 HWND gHwnd;
 HINSTANCE gInstance;
@@ -60,7 +63,7 @@ LRESULT __stdcall lowLevelMouseProc(_In_ int nCode, _In_ WPARAM wParam, _In_ LPA
         if (wParam == WM_MOUSEMOVE) {
             MSLLHOOKSTRUCT *lp = (MSLLHOOKSTRUCT *)lParam;
             const int x = lp->pt.x;
-            if (prevX < MONITOR_WIDTH && x >= MONITOR_WIDTH && x - prevX < 5) {
+            if (prevX < MONITOR_WIDTH && x >= MONITOR_WIDTH && x - prevX < HORIZONTAL_THRESHOLD) {
                 INPUT input;
                 input.type = INPUT_MOUSE;
                 input.mi.mouseData = 0;
@@ -74,7 +77,7 @@ LRESULT __stdcall lowLevelMouseProc(_In_ int nCode, _In_ WPARAM wParam, _In_ LPA
                     prevX = x;
                     return 1; // mouse handled
                 }
-                WARNING(L"SendInput: %s", GetLastError());
+                WARNING(L"SendInput: %d", GetLastError());
             }
             prevX = x;
         }
@@ -92,6 +95,7 @@ int cleanup()
         }
         gMouseHookHandle = NULL;
     }
+    CloseHandle(gSingleInstanceMutex);
     return 0;
 }
 
@@ -160,23 +164,17 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
     // Check for running instance
-    const HANDLE mutex = CreateMutex(NULL, FALSE, L"{516AE336-EFBB-4EE3-85FF-A7EF650C1D72}");
-    if (mutex == NULL) {
-        switch (GetLastError()) {
-        case ERROR_ALREADY_EXISTS:
-            WARNING(L"CreateMutex: ERROR_ALREADY_EXISTS");
-            break;
-        case ERROR_INVALID_HANDLE:
-            WARNING(L"CreateMutex: ERROR_INVALID_HANDLE");
-            break;
-        case ERROR_ACCESS_DENIED:
-            WARNING(L"CreateMutex: ERROR_ACCESS_DENIED");
-            break;
-        }
+    gSingleInstanceMutex = CreateMutex(NULL, FALSE, L"{516AE336-EFBB-4EE3-85FF-A7EF650C1D72}");
+    if (gSingleInstanceMutex == NULL) {
+        WARNING(L"CreateMutex: %d", GetLastError());
+        return -1;
+    }
+    if (GetLastError() == ERROR_ALREADY_EXISTS) {
+        WARNING("Already running");
         return 0;
     }
 
-    // Save handles
+    // Save instance handles
     gInstance = hInstance;
 
     // Initialize common controls
@@ -231,7 +229,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     // Enable mouse hook
     gMouseHookHandle = SetWindowsHookEx(WH_MOUSE_LL, &lowLevelMouseProc, NULL, 0);
     if (gMouseHookHandle == NULL) {
-        WARNING(L"SetWindowsHookEx failed: %s", GetLastError());
+        WARNING(L"SetWindowsHookEx failed: %d", GetLastError());
         return -1;
     }
 
