@@ -12,7 +12,7 @@
 #define WFILE WIDE1(__FILE__)
 #define WFUNCTION WIDE1(__FUNCTION__)
 
-#define HORIZONTAL_THRESHOLD 7
+#define HORIZONTAL_THRESHOLD 10
 
 const int MONITOR_WIDTH = GetSystemMetrics(SM_CXSCREEN);
 const float X_UNIT = 65536.0f / MONITOR_WIDTH;
@@ -74,7 +74,7 @@ LRESULT __stdcall lowLevelMouseProc(_In_ int nCode, _In_ WPARAM wParam, _In_ LPA
                 input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
 
                 if (SendInput(1, &input, sizeof(INPUT)) > 0) {
-                    prevX = x;
+                    // prevX = x; // don't update prevX because the current x is invalid
                     return 1; // mouse handled
                 }
                 WARNING(L"SendInput: %d", GetLastError());
@@ -170,7 +170,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
         return -1;
     }
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
-        WARNING("Already running");
+        WARNING(L"Already running");
         return 0;
     }
 

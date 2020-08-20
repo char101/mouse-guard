@@ -18,20 +18,12 @@ bool mousePressed = false;
 LRESULT __stdcall lowLevelMouseProc(_In_ int nCode, _In_ WPARAM wParam, _In_ LPARAM lParam)
 {
     if (nCode == 0) {
-        switch (wParam) {
-        case WM_LBUTTONDOWN:
-        case WM_RBUTTONDOWN:
-            mousePressed = true;
-            break;
-        case WM_LBUTTONUP:
-        case WM_RBUTTONUP:
-            mousePressed = false;
-            break;
-        case WM_MOUSEMOVE:
+        if (wParam == WM_MOUSEMOVE) {
             MSLLHOOKSTRUCT *lp = (MSLLHOOKSTRUCT *)lParam;
             const int x = lp->pt.x;
-            if (!mousePressed && prevX < MONITOR_WIDTH && x >= MONITOR_WIDTH) {
-                if (x - prevX < 5) {
+            if (prevX < MONITOR_WIDTH && x >= MONITOR_WIDTH) {
+                cout << x - prevX << endl;
+                if (x - prevX < 8) {
                     INPUT input;
                     input.type = INPUT_MOUSE;
                     input.mi.mouseData = 0;
@@ -50,7 +42,6 @@ LRESULT __stdcall lowLevelMouseProc(_In_ int nCode, _In_ WPARAM wParam, _In_ LPA
             }
             prevX = x;
             // prevY = y;
-            break;
         }
     }
     return CallNextHookEx(0, nCode, wParam, lParam);
